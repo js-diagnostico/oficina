@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { COLORS, inputCls } from '../lib/constants';
 import { Field } from './UI';
 import { supabase } from '../supabaseClient';
+import { inserirPerfilComRetry } from '../lib/api';
 
 export function SetupAdminScreen({ onCriado, onIrParaLogin }) {
   const [nome, setNome] = useState('');
@@ -18,11 +19,23 @@ export function SetupAdminScreen({ onCriado, onIrParaLogin }) {
     setErro('');
     setCarregando(true);
     try {
-      const { data, error } = await supabase.auth.signUp({ email: email.trim(), password: senha });
-      if (error) throw error;
-      if (!data.user) throw new Error('Não foi possível criar a conta. Verifique se a confirmação de e-mail está desativada no Supabase.');
-      const { error: e2 } = await supabase.from('profiles').insert({ id: data.user.id, nome, papel: 'admin' });
-      if (e2) throw e2;
+      // Se uma tentativa anterior já criou o login mas não o perfil, entra em vez de tentar criar de novo
+      const tentativaLogin = await supabase.auth.signInWithPassword({ email: email.trim(), password: senha });
+      let userId;
+      if (!tentativaLogin.error && tentativaLogin.data.user) {
+        userId = tentativaLogin.data.user.id;
+      } else {
+        const { data, error } = await supabase.auth.signUp({ email: email.trim(), password: senha });
+        if (error) {
+          if ((error.message || '').toLowerCase().includes('already registered')) {
+            throw new Error('Esse e-mail já tem uma conta criada, mas com senha diferente da que você digitou agora. Tente lembrar a senha usada antes, ou apague o usuário em Supabase > Authentication > Users e tente de novo.');
+          }
+          throw error;
+        }
+        if (!data.user) throw new Error('Não foi possível criar a conta. Verifique se a confirmação de e-mail está desativada no Supabase.');
+        userId = data.user.id;
+      }
+      await inserirPerfilComRetry(userId, nome, 'admin');
       onCriado();
     } catch (e) {
       setErro(e.message || 'Erro ao criar a conta.');

@@ -90,7 +90,30 @@ Se tudo funcionar aqui, pode seguir pro próximo passo.
 
 ---
 
-## Perguntas comuns
+## Passo 5 — Backup automático diário (grátis)
+
+Já deixei pronto o arquivo `.github/workflows/backup.yml`, que faz backup do banco todo dia de madrugada e guarda dentro do próprio repositório do GitHub, na pasta `backups/`. Pra ativar:
+
+1. **Confirme que o repositório é privado** no GitHub (Settings > General > role até "Danger Zone" > "Change visibility"). Nunca deixe backups do banco num repositório público.
+2. No Supabase, vá em **Project Settings > Database**, seção **"Connection string"**, escolha o formato **URI**, e copie a string (algo como `postgresql://postgres:[SUA-SENHA]@db.xxxxx.supabase.co:5432/postgres`) — troque `[SUA-SENHA]` pela senha do banco que você criou lá no Passo 1
+3. No GitHub, vá em **Settings > Secrets and variables > Actions**
+4. Clique em **"New repository secret"**
+   - Nome: `SUPABASE_DB_URL`
+   - Valor: cole a connection string completa (já com a senha no lugar certo)
+5. Clique em **"Add secret"**
+6. Pronto — a partir da próxima meia-noite (horário de Brasília), o backup roda sozinho todo dia
+
+**Pra testar na hora, sem esperar até meia-noite:**
+1. No GitHub, clique na aba **"Actions"**
+2. Clique em **"Backup diário do banco de dados"** na lista à esquerda
+3. Clique em **"Run workflow"** > **"Run workflow"** de novo pra confirmar
+4. Espere 1-2 minutos e veja se aparece uma pasta `backups/` nova no repositório, com os arquivos `roles.sql`, `schema.sql` e `data.sql`
+
+**Se precisar restaurar um backup** (recuperar os dados depois de algum problema): baixe os arquivos `.sql` da pasta `backups/`, entre em contato comigo, ou siga o guia oficial em https://supabase.com/docs/guides/deployment/ci/backups — o processo usa a mesma ferramenta (Supabase CLI) para reimportar os arquivos.
+
+---
+
+
 
 **"Esqueci a senha, e agora?"**
 No painel do Supabase, vá em Authentication > Users, encontre o e-mail da pessoa e clique nos três pontinhos para gerar um link de redefinição, ou delete e recrie o acesso pela aba Usuários do app.

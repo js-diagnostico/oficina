@@ -58,17 +58,20 @@ export default function App() {
   useEffect(() => {
     if (sessao === undefined) return;
     if (sessao === null) { setPerfil(null); setDadosCarregados(false); return; }
-    (async () => {
-      try {
-        const { data, error } = await supabase.from('profiles').select('*').eq('id', sessao.user.id).single();
-        if (error) throw error;
-        setPerfil({ id: data.id, nome: data.nome, papel: data.papel });
-        setPerfilErro('');
-      } catch (e) {
-        setPerfil(null);
-        setPerfilErro('Não encontramos seu cadastro de acesso. Peça para o administrador te cadastrar em Usuários.');
-      }
-    })();
+    carregarPerfil();
+  }, [sessao]);
+
+  const carregarPerfil = useCallback(async () => {
+    if (!sessao) return;
+    try {
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', sessao.user.id).single();
+      if (error) throw error;
+      setPerfil({ id: data.id, nome: data.nome, papel: data.papel });
+      setPerfilErro('');
+    } catch (e) {
+      setPerfil(null);
+      setPerfilErro('Não encontramos seu cadastro de acesso. Peça para o administrador te cadastrar em Usuários, ou tente de novo em alguns segundos.');
+    }
   }, [sessao]);
 
   // ---------- Dados do app ----------
@@ -254,8 +257,7 @@ export default function App() {
     const { data, error } = await supabase.auth.signUp({ email: email.trim(), password: senha });
     if (error) throw error;
     if (sessaoAtual) await supabase.auth.setSession({ access_token: sessaoAtual.access_token, refresh_token: sessaoAtual.refresh_token });
-    const { error: e2 } = await supabase.from('profiles').insert({ id: data.user.id, nome, papel: 'funcionario' });
-    if (e2) throw e2;
+    await api.inserirPerfilComRetry(data.user.id, nome, 'funcionario');
     setUsuarios(await api.fetchProfiles());
     flash('Usuário criado.');
   };
@@ -288,7 +290,10 @@ export default function App() {
         <div className="max-w-sm text-center">
           <p style={{ fontFamily: "'Oswald', sans-serif", fontSize: '18px', color: COLORS.ink, marginBottom: '10px' }}>Acesso não encontrado</p>
           <p style={{ color: COLORS.textMuted, fontSize: '13px', marginBottom: '16px' }}>{perfilErro || 'Carregando seu perfil…'}</p>
-          <button onClick={sair} className="px-4 py-2 text-sm" style={{ background: COLORS.ink, color: '#fff' }}>Sair</button>
+          <div className="flex gap-2 justify-center">
+            <button onClick={carregarPerfil} className="px-4 py-2 text-sm" style={{ background: COLORS.red, color: '#fff' }}>Tentar de novo</button>
+            <button onClick={sair} className="px-4 py-2 text-sm" style={{ background: COLORS.ink, color: '#fff' }}>Sair</button>
+          </div>
         </div>
       </div>
     );

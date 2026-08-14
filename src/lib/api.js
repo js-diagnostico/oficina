@@ -1,6 +1,19 @@
 import { supabase } from '../supabaseClient';
 import { CATEGORIAS_SERVICO } from './constants';
 
+export async function inserirPerfilComRetry(id, nome, papel, tentativas = 5, delayMs = 500) {
+  let ultimoErro;
+  for (let i = 0; i < tentativas; i++) {
+    const { error } = await supabase.from('profiles').insert({ id, nome, papel });
+    if (!error) return;
+    ultimoErro = error;
+    // 23503 = violação de chave estrangeira (o usuário do Auth ainda não "assentou" no banco) — vale tentar de novo
+    if (error.code !== '23503') break;
+    await new Promise((r) => setTimeout(r, delayMs));
+  }
+  throw ultimoErro;
+}
+
 // ---------- mapeamento OS ----------
 function osRowToObj(row) {
   return {
