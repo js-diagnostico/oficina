@@ -58,7 +58,7 @@ export function emptyOS() {
     id: null,
     numero: null,
     cliente: { nome: '', telefone: '' },
-    veiculo: { placa: '', modelo: '', ano: '', km: '' },
+    veiculo: { placa: '', modelo: '', ano: '', km: '', chassi: '' },
     problema: '',
     mecanicoId: '',
     vendedorId: '',
@@ -70,8 +70,10 @@ export function emptyOS() {
     laudoTecnico: '',
     formaPagamento: '',
     garantiaDias: '',
+    desconto: '',
     nivelCombustivel: '',
     checklist: CHECKLIST_PADRAO.map((nome) => ({ id: uid(), nome, status: '' })),
+    avarias: [],
     status: 'aberta',
     createdAt: null,
     dataConclusao: null,
@@ -79,14 +81,28 @@ export function emptyOS() {
   };
 }
 export function emptyCliente() { return { id: null, nome: '', telefone: '', documento: '', endereco: '', veiculos: [] }; }
-export function emptyVeiculo() { return { id: uid(), placa: '', modelo: '', ano: '' }; }
+export function emptyVeiculo() { return { id: uid(), placa: '', modelo: '', ano: '', chassi: '' }; }
 export function emptyPeca() { return { id: null, codigo: '', descricao: '', categoria: '', custo: '', preco: '', estoqueAtual: '', estoqueMin: '' }; }
 export function emptyFuncionario() { return { id: null, nome: '', papel: 'mecanico', percentual: '', telefone: '' }; }
 export function emptyServicoCatalogo() { return { id: null, nome: '', categoria: CATEGORIAS_SERVICO[0], valorPadrao: '', descricao: '' }; }
 
 export const totalServicos = (os) => (os.servicos || []).reduce((t, i) => t + (parseFloat(i.valor) || 0), 0);
 export const totalPecas = (os) => (os.pecas || []).reduce((t, i) => t + (parseFloat(i.qtd) || 0) * (parseFloat(i.valorUnit) || 0), 0);
-export const calcTotal = (os) => totalServicos(os) + totalPecas(os);
+
+export function totaisOS(os) {
+  const totalServico = totalServicos(os);
+  const totalProduto = totalPecas(os);
+  const totalBruto = totalServico + totalProduto;
+  const desconto = Math.min(parseFloat(os.desconto) || 0, totalBruto);
+  const totalLiquido = totalBruto - desconto;
+  // rateia o desconto proporcionalmente entre serviço e peça, para base de comissão
+  const fracServico = totalBruto > 0 ? totalServico / totalBruto : 0;
+  const fracProduto = totalBruto > 0 ? totalProduto / totalBruto : 0;
+  const servicoLiquido = totalServico - desconto * fracServico;
+  const produtoLiquido = totalProduto - desconto * fracProduto;
+  return { totalServico, totalProduto, totalBruto, desconto, totalLiquido, servicoLiquido, produtoLiquido };
+}
+export const calcTotal = (os) => totaisOS(os).totalLiquido;
 
 export const brl = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 export const brDate = (str) => {

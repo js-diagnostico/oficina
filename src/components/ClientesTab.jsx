@@ -49,10 +49,11 @@ export default function ClientesTab({ clientes, onSalvar, onExcluir }) {
           </div>
           {editing.veiculos.length === 0 && <p style={{ color: COLORS.textMuted, fontSize: '13px', marginBottom: '10px' }}>Nenhum veículo cadastrado.</p>}
           {editing.veiculos.map((v) => (
-            <div key={v.id} className="flex gap-2 items-center mb-2">
+            <div key={v.id} className="flex gap-2 items-center mb-2 flex-wrap">
               <input value={v.placa} onChange={(e) => updVeiculo(v.id, 'placa', e.target.value.toUpperCase())} placeholder="Placa" className={inputCls} style={{ width: '120px', fontFamily: "'Roboto Mono', monospace", border: `1px solid ${COLORS.line}` }} />
-              <input value={v.modelo} onChange={(e) => updVeiculo(v.id, 'modelo', e.target.value)} placeholder="Modelo" className={inputCls} style={{ flex: 1, border: `1px solid ${COLORS.line}` }} />
+              <input value={v.modelo} onChange={(e) => updVeiculo(v.id, 'modelo', e.target.value)} placeholder="Modelo" className={inputCls} style={{ flex: 1, minWidth: '140px', border: `1px solid ${COLORS.line}` }} />
               <input value={v.ano} onChange={(e) => updVeiculo(v.id, 'ano', e.target.value)} placeholder="Ano" className={inputCls} style={{ width: '80px', border: `1px solid ${COLORS.line}` }} />
+              <input value={v.chassi} onChange={(e) => updVeiculo(v.id, 'chassi', e.target.value.toUpperCase())} placeholder="Chassi" className={inputCls} style={{ width: '150px', fontFamily: "'Roboto Mono', monospace", border: `1px solid ${COLORS.line}` }} />
               <button onClick={() => rmVeiculo(v.id)} style={{ color: COLORS.red }}><Trash2 size={16} /></button>
             </div>
           ))}

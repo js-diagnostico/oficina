@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CheckCircle2, Circle } from 'lucide-react';
-import { COLORS, PAPEL_FUNCIONARIO, brl, thisMonthKey, monthKey, totalServicos, totalPecas } from '../lib/constants';
+import { COLORS, PAPEL_FUNCIONARIO, brl, thisMonthKey, monthKey, totaisOS } from '../lib/constants';
 
 export default function ComissoesTab({ ordens, funcionarios, comissoesPagas, onTogglePago }) {
   const [mes, setMes] = useState(thisMonthKey());
@@ -9,8 +9,8 @@ export default function ComissoesTab({ ordens, funcionarios, comissoesPagas, onT
     const ehMecanico = f.papel === 'mecanico' || f.papel === 'ambos';
     const ehVendedor = f.papel === 'vendedor' || f.papel === 'ambos';
     const osDoMes = ordens.filter((o) => o.status === 'concluida' && monthKey(o.dataConclusao || o.createdAt) === mes);
-    const baseServicos = ehMecanico ? osDoMes.filter((o) => o.mecanicoId === f.id).reduce((t, o) => t + totalServicos(o), 0) : 0;
-    const basePecas = ehVendedor ? osDoMes.filter((o) => o.vendedorId === f.id).reduce((t, o) => t + totalPecas(o), 0) : 0;
+    const baseServicos = ehMecanico ? osDoMes.filter((o) => o.mecanicoId === f.id).reduce((t, o) => t + totaisOS(o).servicoLiquido, 0) : 0;
+    const basePecas = ehVendedor ? osDoMes.filter((o) => o.vendedorId === f.id).reduce((t, o) => t + totaisOS(o).produtoLiquido, 0) : 0;
     const pct = parseFloat(f.percentual) || 0;
     const comissaoServicos = baseServicos * pct / 100;
     const comissaoPecas = basePecas * pct / 100;
@@ -26,7 +26,7 @@ export default function ComissoesTab({ ordens, funcionarios, comissoesPagas, onT
       <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
         <div>
           <h1 style={{ fontFamily: "'Oswald', sans-serif", fontSize: '28px', color: COLORS.ink }}>COMISSÕES</h1>
-          <p style={{ color: COLORS.textMuted, fontSize: '14px' }}>Comissão de mecânicos e vendedores sobre as OS concluídas</p>
+          <p style={{ color: COLORS.textMuted, fontSize: '14px' }}>Comissão de mecânicos e vendedores sobre as OS concluídas (já descontado o desconto dado ao cliente)</p>
         </div>
         <input type="month" value={mes} onChange={(e) => setMes(e.target.value)} className="px-3 py-2 text-sm outline-none" style={{ background: COLORS.card, border: `1px solid ${COLORS.line}` }} />
       </div>

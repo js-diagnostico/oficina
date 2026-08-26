@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Search, Printer, Pencil, Trash2, ClipboardList } from 'lucide-react';
 import { COLORS, STATUS, brl, brDate, calcTotal, thisMonthKey, monthKey } from '../lib/constants';
 
-export default function Dashboard({ ordens, estoque, onNovo, onVer, onEditar, onExcluir, onMudarStatus }) {
+export default function Dashboard({ ordens, estoque, papel, onNovo, onVer, onEditar, onExcluir, onMudarStatus }) {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('todas');
 
@@ -11,6 +11,7 @@ export default function Dashboard({ ordens, estoque, onNovo, onVer, onEditar, on
     const q = search.trim().toLowerCase();
     const matchesSearch = !q ||
       o.veiculo.placa.toLowerCase().includes(q) ||
+      (o.veiculo.chassi || '').toLowerCase().includes(q) ||
       o.cliente.nome.toLowerCase().includes(q) ||
       (o.numero || '').toLowerCase().includes(q) ||
       o.veiculo.modelo.toLowerCase().includes(q) ||
@@ -45,9 +46,9 @@ export default function Dashboard({ ordens, estoque, onNovo, onVer, onEditar, on
           { label: 'Abertas', value: stats.abertas, color: COLORS.gold },
           { label: 'Em andamento', value: stats.andamento, color: COLORS.navy },
           { label: 'Concluídas no mês', value: stats.concluidasMes, color: COLORS.green },
-          { label: 'Faturado no mês', value: brl(stats.faturamentoMes), color: COLORS.red, small: true },
+          papel === 'admin' && { label: 'Faturado no mês', value: brl(stats.faturamentoMes), color: COLORS.red, small: true },
           { label: 'Estoque baixo', value: stats.estoqueBaixo, color: stats.estoqueBaixo > 0 ? COLORS.maroon : COLORS.textMuted },
-        ].map((s, i) => (
+        ].filter(Boolean).map((s, i) => (
           <div key={i} className="p-4" style={{ background: COLORS.card, border: `1px solid ${COLORS.line}` }}>
             <div style={{ color: COLORS.textMuted, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: "'Oswald', sans-serif" }}>{s.label}</div>
             <div style={{ color: s.color, fontFamily: "'Oswald', sans-serif", fontSize: s.small ? '22px' : '30px', marginTop: '2px' }}>{s.value}</div>
@@ -58,7 +59,7 @@ export default function Dashboard({ ordens, estoque, onNovo, onVer, onEditar, on
       <div className="flex flex-wrap gap-3 mb-4">
         <div className="flex items-center gap-2 px-3 py-2 flex-1 min-w-[220px]" style={{ background: COLORS.card, border: `1px solid ${COLORS.line}` }}>
           <Search size={16} style={{ color: COLORS.textMuted }} />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por placa, cliente, modelo ou número da OS" className="w-full outline-none text-sm" style={{ background: 'transparent' }} />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por placa, chassi, cliente, modelo ou número da OS" className="w-full outline-none text-sm" style={{ background: 'transparent' }} />
         </div>
         <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="px-3 py-2 text-sm outline-none" style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, color: COLORS.ink }}>
           <option value="todas">Todos os status</option>

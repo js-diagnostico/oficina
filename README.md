@@ -90,6 +90,16 @@ Se tudo funcionar aqui, pode seguir pro próximo passo.
 
 ---
 
+## Atualização: busca por chassi e desconto (se seu projeto já existia)
+
+Se você já tinha criado o projeto no Supabase antes desta atualização, rode uma vez o script `supabase/migration-desconto.sql` no SQL Editor do Supabase (adiciona a coluna de desconto na ordem de serviço). O campo de chassi não precisa de migração no banco, ele já se encaixa automaticamente dentro dos dados do veículo.
+
+## Atualização: diagrama de avarias do veículo (se seu projeto já existia)
+
+Da mesma forma, rode uma vez o script `supabase/migration-avarias.sql` no SQL Editor do Supabase (adiciona a coluna do diagrama de avarias). Se está criando o projeto do zero, não precisa — já está incluído no `schema.sql`.
+
+---
+
 ## Passo 5 — Backup automático diário (grátis)
 
 Já deixei pronto o arquivo `.github/workflows/backup.yml`, que faz backup do banco todo dia de madrugada e guarda dentro do próprio repositório do GitHub, na pasta `backups/`. Pra ativar:
@@ -113,7 +123,46 @@ Já deixei pronto o arquivo `.github/workflows/backup.yml`, que faz backup do ba
 
 ---
 
+## "Esqueci minha senha" — como configurar
 
+O botão "Esqueci minha senha" na tela de login já está pronto no código, mas precisa de um ajuste no Supabase pra funcionar:
+
+1. No Supabase, vá em **Authentication > URL Configuration**
+2. Em **"Site URL"**, coloque o endereço do seu site (ex.: `https://oficina-wheat.vercel.app` ou seu domínio próprio)
+3. Em **"Redirect URLs"**, adicione esse mesmo endereço
+4. Salve
+
+Depois disso, ao clicar em "Esqueci minha senha", digitar o e-mail e confirmar, chega um e-mail com um link — ao clicar, a pessoa cai direto numa tela de "Definir nova senha" dentro do próprio app.
+
+**Limite importante:** o envio de e-mail gratuito do Supabase é limitado a **2 e-mails por hora** no total do projeto. Para uso pessoal (você, dono, esquecendo a senha de vez em quando) isso é suficiente. Se no futuro tiver muitos funcionários pedindo recuperação com frequência, vale configurar um servidor de e-mail próprio (SMTP) nas configurações do Supabase — mas não é necessário agora.
+
+**Alternativa mais rápida, sem esperar e-mail:** você, como dono, também pode ir direto no painel do Supabase em **Authentication > Users**, encontrar seu e-mail na lista, e usar a opção de enviar recuperação de senha por ali mesmo.
+
+---
+
+## Passo 6 — Sugestão de preço com IA (opcional, tem custo por uso)
+
+O botão "Sugerir preço com IA" (dentro de Nova OS, dentro de "Diagnóstico") manda a descrição do problema pra API da Claude e recebe uma sugestão de valor. Pra ativar:
+
+1. Crie uma conta em https://console.anthropic.com (é diferente da conta do claude.ai)
+2. Vá em **"API Keys"** e clique em **"Create Key"**
+3. Copie a chave gerada (começa com `sk-ant-...`) — ela só aparece uma vez, guarde em local seguro
+4. Adicione um método de pagamento em **"Billing"** (é cobrança por uso, bem barato — cada sugestão custa uma fração de centavo)
+5. Na Vercel, vá em **Settings > Environment Variables** do seu projeto e adicione:
+   - **Key**: `ANTHROPIC_API_KEY`
+   - **Value**: a chave que você copiou
+   - **Importante**: essa variável **não** leva o prefixo `VITE_` (diferente das do Supabase) — isso é de propósito, pra ela nunca aparecer no navegador do cliente, só no servidor
+6. Vá em **Deployments > Redeploy**
+
+**Atenção:** essa função só funciona depois de publicada na Vercel — rodando `npm run dev` no seu computador ela não vai responder (a menos que use `vercel dev` no lugar de `npm run dev`).
+
+Se não quiser usar esse recurso, não tem problema nenhum em pular esse passo — o botão só vai mostrar uma mensagem de erro se for clicado sem a chave configurada, o resto do app funciona normalmente.
+
+**Importante sobre a sugestão:** é uma estimativa geral da IA, não é baseada nos preços reais da sua região nem no seu histórico de OS — sempre confira antes de usar.
+
+---
+
+## Perguntas comuns
 
 **"Esqueci a senha, e agora?"**
 No painel do Supabase, vá em Authentication > Users, encontre o e-mail da pessoa e clique nos três pontinhos para gerar um link de redefinição, ou delete e recrie o acesso pela aba Usuários do app.

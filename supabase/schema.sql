@@ -94,6 +94,7 @@ create table if not exists ordens_servico (
   garantia_dias text,
   nivel_combustivel text,
   checklist jsonb not null default '[]',
+  avarias jsonb not null default '[]',
   servicos jsonb not null default '[]',
   pecas jsonb not null default '[]',
   observacoes text,
@@ -101,6 +102,7 @@ create table if not exists ordens_servico (
   vendedor_id uuid references funcionarios(id) on delete set null,
   data_entrada date,
   previsao date,
+  desconto numeric default 0,
   data_conclusao timestamptz,
   estoque_baixado boolean default false,
   created_at timestamptz default now()

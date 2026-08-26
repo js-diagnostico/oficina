@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
-import { ChevronLeft, User, Car, Gauge, Wrench, Package, ClipboardList, Percent, AlertCircle, Trash2 } from 'lucide-react';
-import { COLORS, STATUS, STATUS_CHECKLIST, FORMAS_PAGAMENTO, brl, calcTotal, inputCls, uid } from '../lib/constants';
+import { ChevronLeft, User, Car, Gauge, Wrench, Package, ClipboardList, Percent, AlertCircle, Trash2, Sparkles } from 'lucide-react';
+import { COLORS, STATUS, STATUS_CHECKLIST, FORMAS_PAGAMENTO, brl, totaisOS, inputCls, uid } from '../lib/constants';
 import { Section, Field, AddBtn } from './UI';
+import CarroDiagrama from './CarroDiagrama';
 
 export default function OSForm({ osInicial, clientes, estoque, funcionarios, catalogoServicos, config, onSalvar, onCancelar }) {
   const [form, setForm] = useState(osInicial);
   const [erro, setErro] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [clienteSelId, setClienteSelId] = useState('');
+  const [sugestaoIA, setSugestaoIA] = useState(null);
+  const [carregandoIA, setCarregandoIA] = useState(false);
+  const [erroIA, setErroIA] = useState('');
 
   const clienteSel = clientes.find((c) => c.id === clienteSelId);
   const mecanicos = funcionarios.filter((f) => f.papel === 'mecanico' || f.papel === 'ambos');
@@ -21,7 +25,7 @@ export default function OSForm({ osInicial, clientes, estoque, funcionarios, cat
   };
   const selecionarVeiculo = (veiculoId) => {
     const v = clienteSel && clienteSel.veiculos.find((x) => x.id === veiculoId);
-    if (v) setForm((f) => ({ ...f, veiculo: { ...f.veiculo, placa: v.placa, modelo: v.modelo, ano: v.ano } }));
+    if (v) setForm((f) => ({ ...f, veiculo: { ...f.veiculo, placa: v.placa, modelo: v.modelo, ano: v.ano, chassi: v.chassi || '' } }));
   };
 
   const addServico = () => setForm((f) => ({ ...f, servicos: [...f.servicos, { id: uid(), descricao: '', valor: '', servicoId: '' }] }));
@@ -54,6 +58,42 @@ export default function OSForm({ osInicial, clientes, estoque, funcionarios, cat
   const addChecklistItem = () => setForm((f) => ({ ...f, checklist: [...f.checklist, { id: uid(), nome: '', status: '' }] }));
   const updChecklistNome = (id, nome) => setForm((f) => ({ ...f, checklist: f.checklist.map((c) => (c.id === id ? { ...c, nome } : c)) }));
   const rmChecklistItem = (id) => setForm((f) => ({ ...f, checklist: f.checklist.filter((c) => c.id !== id) }));
+
+  const clicarDiagrama = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setForm((f) => ({ ...f, avarias: [...(f.avarias || []), { id: uid(), x, y, nota: '' }] }));
+  };
+  const atualizarNotaAvaria = (id, nota) => setForm((f) => ({ ...f, avarias: f.avarias.map((a) => (a.id === id ? { ...a, nota } : a)) }));
+  const removerAvaria = (id) => setForm((f) => ({ ...f, avarias: f.avarias.filter((a) => a.id !== id) }));
+
+  const pedirSugestaoIA = async () => {
+    if (!form.problema.trim()) { setErroIA('Descreva o problema relatado antes de pedir a sugestão.'); return; }
+    setErroIA('');
+    setSugestaoIA(null);
+    setCarregandoIA(true);
+    try {
+      const resp = await fetch('/api/sugerir-preco', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ descricao: form.problema, veiculo: form.veiculo.modelo }),
+      });
+      const dados = await resp.json();
+      if (!resp.ok) throw new Error(dados.error || 'Não foi possível gerar a sugestão.');
+      setSugestaoIA(dados);
+    } catch (e) {
+      setErroIA(e.message || 'Não foi possível gerar a sugestão.');
+    } finally {
+      setCarregandoIA(false);
+    }
+  };
+
+  const usarSugestaoIA = () => {
+    if (!sugestaoIA) return;
+    setForm((f) => ({ ...f, servicos: [...f.servicos, { id: uid(), descricao: 'Serviço (sugestão IA)', valor: String(sugestaoIA.valorSugerido), servicoId: '' }] }));
+    setSugestaoIA(null);
+  };
 
   const submit = async () => {
     if (!form.cliente.nome.trim()) { setErro('Informe o nome do cliente.'); return; }
@@ -100,6 +140,7 @@ export default function OSForm({ osInicial, clientes, estoque, funcionarios, cat
 
       <Section title="Veículo" icon={Car}>
         <Field label="Placa *"><input value={form.veiculo.placa} onChange={(e) => setForm((f) => ({ ...f, veiculo: { ...f.veiculo, placa: e.target.value.toUpperCase() } }))} className={inputCls} style={{ fontFamily: "'Roboto Mono', monospace" }} placeholder="ABC1D23" /></Field>
+        <Field label="Chassi"><input value={form.veiculo.chassi} onChange={(e) => setForm((f) => ({ ...f, veiculo: { ...f.veiculo, chassi: e.target.value.toUpperCase() } }))} className={inputCls} style={{ fontFamily: "'Roboto Mono', monospace" }} placeholder="9BW..." /></Field>
         <Field label="Modelo / Marca"><input value={form.veiculo.modelo} onChange={(e) => setForm((f) => ({ ...f, veiculo: { ...f.veiculo, modelo: e.target.value } }))} className={inputCls} placeholder="Ex.: VW Gol 1.6" /></Field>
         <Field label="Ano"><input value={form.veiculo.ano} onChange={(e) => setForm((f) => ({ ...f, veiculo: { ...f.veiculo, ano: e.target.value } }))} className={inputCls} placeholder="2018" /></Field>
         <Field label="Km atual"><input value={form.veiculo.km} onChange={(e) => setForm((f) => ({ ...f, veiculo: { ...f.veiculo, km: e.target.value } }))} className={inputCls} placeholder="Ex.: 84.000" /></Field>
@@ -127,10 +168,46 @@ export default function OSForm({ osInicial, clientes, estoque, funcionarios, cat
             </div>
           ))}
         </div>
+
+        <div style={{ gridColumn: '1 / -1' }}>
+          <div style={{ fontSize: '12px', color: COLORS.textMuted, textTransform: 'uppercase', letterSpacing: '0.03em', marginBottom: '8px' }}>Avarias no veículo (toque no desenho para marcar)</div>
+          <CarroDiagrama avarias={form.avarias} editavel onClickDiagrama={clicarDiagrama} onRemoveMarker={removerAvaria} />
+          {form.avarias.length > 0 && (
+            <div className="mt-3 flex flex-col gap-2 max-w-sm mx-auto">
+              {form.avarias.map((a, idx) => (
+                <div key={a.id} className="flex items-center gap-2">
+                  <span style={{ width: 20, height: 20, borderRadius: '50%', background: COLORS.red, color: '#fff', fontSize: '11px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontFamily: "'Oswald', sans-serif" }}>{idx + 1}</span>
+                  <input value={a.nota} onChange={(e) => atualizarNotaAvaria(a.id, e.target.value)} className={inputCls} placeholder="Ex.: risco na porta, amassado no para-choque…" style={{ flex: 1, border: `1px solid ${COLORS.line}` }} />
+                  <button onClick={() => removerAvaria(a.id)} style={{ color: COLORS.red, flexShrink: 0 }}><Trash2 size={16} /></button>
+                </div>
+              ))}
+            </div>
+          )}
+          {form.avarias.length === 0 && <p className="text-center" style={{ color: COLORS.textMuted, fontSize: '12px', marginTop: '6px' }}>Nenhuma avaria marcada.</p>}
+        </div>
       </Section>
 
       <Section title="Diagnóstico" icon={Gauge}>
         <Field label="Problema relatado" full><textarea value={form.problema} onChange={(e) => setForm((f) => ({ ...f, problema: e.target.value }))} className={inputCls} rows={3} placeholder="Descreva o problema relatado pelo cliente" /></Field>
+        <div style={{ gridColumn: '1 / -1' }}>
+          <button type="button" onClick={pedirSugestaoIA} disabled={carregandoIA} className="flex items-center gap-2 text-xs px-3 py-1.5 mb-2" style={{ color: COLORS.navy, border: `1px solid ${COLORS.navy}`, fontFamily: "'Oswald', sans-serif", textTransform: 'uppercase', opacity: carregandoIA ? 0.6 : 1, background: 'transparent' }}>
+            <Sparkles size={14} /> {carregandoIA ? 'Consultando IA…' : 'Sugerir preço com IA'}
+          </button>
+          {erroIA && <p style={{ fontSize: '12px', color: COLORS.red, marginBottom: '8px' }}>{erroIA}</p>}
+          {sugestaoIA && (
+            <div className="p-3 mb-3" style={{ background: COLORS.navySoft, border: `1px solid ${COLORS.navy}` }}>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <span style={{ fontFamily: "'Roboto Mono', monospace", fontWeight: 700, fontSize: '18px', color: COLORS.navy }}>{brl(sugestaoIA.valorSugerido)}</span>
+                  <span style={{ fontSize: '12px', color: COLORS.textMuted, marginLeft: '8px' }}>(faixa: {brl(sugestaoIA.faixaMin)} – {brl(sugestaoIA.faixaMax)})</span>
+                </div>
+                <button type="button" onClick={usarSugestaoIA} className="px-3 py-1.5 text-xs" style={{ background: COLORS.navy, color: '#fff', fontFamily: "'Oswald', sans-serif", textTransform: 'uppercase' }}>Adicionar como serviço</button>
+              </div>
+              {sugestaoIA.justificativa && <p style={{ fontSize: '12px', color: COLORS.ink, marginTop: '6px' }}>{sugestaoIA.justificativa}</p>}
+              <p style={{ fontSize: '11px', color: COLORS.textMuted, marginTop: '6px' }}>Sugestão gerada por IA, apenas uma estimativa — confira antes de usar.</p>
+            </div>
+          )}
+        </div>
         <Field label="Mecânico responsável">
           <select value={form.mecanicoId} onChange={(e) => setForm((f) => ({ ...f, mecanicoId: e.target.value }))} className={inputCls}>
             <option value="">Selecionar…</option>
@@ -214,10 +291,28 @@ export default function OSForm({ osInicial, clientes, estoque, funcionarios, cat
         <Field label="" full><textarea value={form.observacoes} onChange={(e) => setForm((f) => ({ ...f, observacoes: e.target.value }))} className={inputCls} rows={2} placeholder="Garantia, condições, recomendações…" /></Field>
       </Section>
 
-      <div className="flex items-center justify-between mt-6 p-4" style={{ background: COLORS.card, border: `1px solid ${COLORS.line}` }}>
-        <span style={{ fontFamily: "'Oswald', sans-serif", color: COLORS.textMuted, textTransform: 'uppercase', fontSize: '13px' }}>Total estimado</span>
-        <span style={{ fontFamily: "'Roboto Mono', monospace", fontWeight: 700, fontSize: '22px', color: COLORS.ink }}>{brl(calcTotal(form))}</span>
-      </div>
+      <Section title="Desconto" icon={Percent}>
+        <Field label="Desconto (R$)"><input value={form.desconto} onChange={(e) => setForm((f) => ({ ...f, desconto: e.target.value }))} className={inputCls} inputMode="decimal" placeholder="0,00" /></Field>
+      </Section>
+
+      {(() => {
+        const t = totaisOS(form);
+        const linha = (label, valor, destaque) => (
+          <div className="flex items-center justify-between py-1.5" style={destaque ? {} : { borderBottom: `1px solid ${COLORS.line}` }}>
+            <span style={{ fontFamily: "'Oswald', sans-serif", color: destaque ? COLORS.ink : COLORS.textMuted, textTransform: 'uppercase', fontSize: destaque ? '14px' : '13px' }}>{label}</span>
+            <span style={{ fontFamily: "'Roboto Mono', monospace", fontWeight: 700, fontSize: destaque ? '22px' : '15px', color: destaque ? COLORS.red : COLORS.ink }}>{valor}</span>
+          </div>
+        );
+        return (
+          <div className="mt-6 p-4" style={{ background: COLORS.card, border: `1px solid ${COLORS.line}` }}>
+            {linha('Total produto', brl(t.totalProduto))}
+            {linha('Total serviço', brl(t.totalServico))}
+            {linha('Total bruto', brl(t.totalBruto))}
+            {linha('Desconto', '− ' + brl(t.desconto))}
+            {linha('Total líquido', brl(t.totalLiquido), true)}
+          </div>
+        );
+      })()}
 
       <div className="flex gap-3 mt-6 mb-10">
         <button disabled={salvando} onClick={submit} className="px-5 py-2.5" style={{ background: COLORS.red, color: '#fff', fontFamily: "'Oswald', sans-serif", textTransform: 'uppercase', letterSpacing: '0.03em', opacity: salvando ? 0.6 : 1 }}>{salvando ? 'Salvando…' : (form.id ? 'Salvar alterações' : 'Criar ordem de serviço')}</button>

@@ -8,7 +8,7 @@ import {
   COLORS, ABAS_FUNCIONARIO, PAPEL_USUARIO, emptyOS, brl, calcTotal,
 } from './lib/constants';
 import * as api from './lib/api';
-import { SetupAdminScreen, LoginScreen } from './components/Auth';
+import { SetupAdminScreen, LoginScreen, NovaSenhaScreen } from './components/Auth';
 import Dashboard from './components/Dashboard';
 import OSForm from './components/OSForm';
 import PrintableOS from './components/PrintableOS';
@@ -25,6 +25,7 @@ export default function App() {
   const [perfil, setPerfil] = useState(null);
   const [perfilErro, setPerfilErro] = useState('');
   const [modoAuth, setModoAuth] = useState('login');
+  const [recuperandoSenha, setRecuperandoSenha] = useState(false);
 
   const [dadosCarregados, setDadosCarregados] = useState(false);
   const [ordens, setOrdens] = useState([]);
@@ -49,7 +50,8 @@ export default function App() {
   // ---------- Sessão ----------
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSessao(data.session || null));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, novaSessao) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, novaSessao) => {
+      if (event === 'PASSWORD_RECOVERY') setRecuperandoSenha(true);
       setSessao(novaSessao || null);
     });
     return () => listener.subscription.unsubscribe();
@@ -279,6 +281,9 @@ export default function App() {
   if (sessao === undefined) {
     return <TelaCarregando texto="VERIFICANDO ACESSO…" />;
   }
+  if (recuperandoSenha) {
+    return <NovaSenhaScreen onDefinida={() => setRecuperandoSenha(false)} />;
+  }
   if (sessao === null) {
     return modoAuth === 'setup'
       ? <SetupAdminScreen onCriado={() => setModoAuth('login')} onIrParaLogin={() => setModoAuth('login')} />
@@ -350,7 +355,7 @@ export default function App() {
 
         {tab === 'dashboard' && (
           <Dashboard
-            ordens={ordens} estoque={estoque}
+            ordens={ordens} estoque={estoque} papel={perfil.papel}
             onNovo={abrirNovaOS} onVer={abrirVerOS} onEditar={abrirEditarOS}
             onExcluir={(os) => setConfirmDelete({ tipo: 'os', item: os, label: `a OS ${os.numero}` })}
             onMudarStatus={mudarStatusOS}
