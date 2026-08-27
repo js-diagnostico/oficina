@@ -1,0 +1,47 @@
+name: Backup diário do banco de dados
+
+# Roda automaticamente todo dia às 00:00 (horário de Brasília ~ 03:00 UTC),
+# e também pode ser rodado manualmente pela aba "Actions" do GitHub.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * *'
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+
+    steps:
+      - name: Baixar o repositório
+        uses: actions/checkout@v4
+
+      - name: Instalar a ferramenta do Supabase
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Criar pasta de backups
+        run: mkdir -p backups
+
+      - name: Salvar papéis/permissões (roles)
+        run: supabase db dump --db-url "$SUPABASE_DB_URL" -f backups/roles.sql --role-only
+
+      - name: Salvar estrutura do banco (schema)
+        run: supabase db dump --db-url "$SUPABASE_DB_URL" -f backups/schema.sql
+
+      - name: Salvar os dados (clientes, OS, estoque etc.)
+        run: supabase db dump --db-url "$SUPABASE_DB_URL" -f backups/data.sql --use-copy --data-only
+
+      - name: Guardar o backup no repositório
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Backup automático do banco de dados"
+          branch: main
+          commit_user_name: github-actions[bot]
+          commit_user_email: github-actions[bot]@users.noreply.github.com

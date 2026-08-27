@@ -140,19 +140,25 @@ Depois disso, ao clicar em "Esqueci minha senha", digitar o e-mail e confirmar, 
 
 ---
 
-## Passo 6 — Sugestão de preço com IA (opcional, tem custo por uso)
+## Passo 6 — Sugestão de preço com IA (opcional, grátis)
 
-O botão "Sugerir preço com IA" (dentro de Nova OS, dentro de "Diagnóstico") manda a descrição do problema pra API da Claude e recebe uma sugestão de valor. Pra ativar:
+O botão "Sugerir preço com IA" (dentro de Nova OS, dentro de "Diagnóstico") manda a descrição do problema pra API do **Google Gemini** e recebe uma sugestão de valor. O Gemini tem um nível gratuito de verdade, sem precisar de cartão de crédito. Pra ativar:
 
-1. Crie uma conta em https://console.anthropic.com (é diferente da conta do claude.ai)
-2. Vá em **"API Keys"** e clique em **"Create Key"**
-3. Copie a chave gerada (começa com `sk-ant-...`) — ela só aparece uma vez, guarde em local seguro
-4. Adicione um método de pagamento em **"Billing"** (é cobrança por uso, bem barato — cada sugestão custa uma fração de centavo)
-5. Na Vercel, vá em **Settings > Environment Variables** do seu projeto e adicione:
-   - **Key**: `ANTHROPIC_API_KEY`
+1. Acesse https://aistudio.google.com
+2. Entre com sua conta Google (a mesma do Gmail, se tiver)
+3. Clique em **"Get API key"** (geralmente no menu esquerdo ou canto superior)
+4. Clique em **"Create API key"**
+5. Escolha criar num projeto novo (ou "Create API key in new project") — não precisa cadastrar cartão
+6. Copie a chave gerada (uma sequência de letras e números)
+7. Na Vercel, vá em **Settings > Environment Variables** do seu projeto e adicione:
+   - **Key**: `GEMINI_API_KEY`
    - **Value**: a chave que você copiou
    - **Importante**: essa variável **não** leva o prefixo `VITE_` (diferente das do Supabase) — isso é de propósito, pra ela nunca aparecer no navegador do cliente, só no servidor
-6. Vá em **Deployments > Redeploy**
+8. Vá em **Deployments > Redeploy**
+
+**Limites do gratuito:** o nível grátis do Gemini tem um limite de quantidade de pedidos por dia (geralmente algumas centenas) — mais que suficiente para o uso de uma oficina. Se um dia precisar de mais, o Google oferece upgrade pago, mas não é necessário começar assim.
+
+**Atenção — privacidade:** no nível gratuito, o Google pode usar os textos enviados (a descrição do problema) para melhorar os modelos deles. Não é nada sensível (só a descrição do defeito do carro), mas vale saber. Se isso for uma preocupação, dá pra migrar para uma chave paga do Gemini (aí os dados não são usados para treinamento) ou voltar para a API paga da Anthropic mais pra frente.
 
 **Atenção:** essa função só funciona depois de publicada na Vercel — rodando `npm run dev` no seu computador ela não vai responder (a menos que use `vercel dev` no lugar de `npm run dev`).
 
