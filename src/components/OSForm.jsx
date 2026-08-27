@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronLeft, User, Car, Gauge, Wrench, Package, ClipboardList, Percent, AlertCircle, Trash2, Sparkles } from 'lucide-react';
-import { COLORS, STATUS, STATUS_CHECKLIST, FORMAS_PAGAMENTO, brl, totaisOS, inputCls, uid } from '../lib/constants';
+import { COLORS, STATUS, STATUS_CHECKLIST, FORMAS_PAGAMENTO, brl, totaisOS, inputCls, uid, decodificarChassi } from '../lib/constants';
 import { Section, Field, AddBtn } from './UI';
 import CarroDiagrama from './CarroDiagrama';
 
@@ -26,6 +26,19 @@ export default function OSForm({ osInicial, clientes, estoque, funcionarios, cat
   const selecionarVeiculo = (veiculoId) => {
     const v = clienteSel && clienteSel.veiculos.find((x) => x.id === veiculoId);
     if (v) setForm((f) => ({ ...f, veiculo: { ...f.veiculo, placa: v.placa, modelo: v.modelo, ano: v.ano, chassi: v.chassi || '' } }));
+  };
+  const onChangeChassiOS = (valorBruto) => {
+    const valor = valorBruto.toUpperCase();
+    const decodificado = decodificarChassi(valor);
+    setForm((f) => ({
+      ...f,
+      veiculo: {
+        ...f.veiculo,
+        chassi: valor,
+        modelo: decodificado && decodificado.marca && !f.veiculo.modelo ? decodificado.marca : f.veiculo.modelo,
+        ano: decodificado && decodificado.ano && !f.veiculo.ano ? String(decodificado.ano) : f.veiculo.ano,
+      },
+    }));
   };
 
   const addServico = () => setForm((f) => ({ ...f, servicos: [...f.servicos, { id: uid(), descricao: '', valor: '', servicoId: '' }] }));
@@ -140,7 +153,10 @@ export default function OSForm({ osInicial, clientes, estoque, funcionarios, cat
 
       <Section title="Veículo" icon={Car}>
         <Field label="Placa *"><input value={form.veiculo.placa} onChange={(e) => setForm((f) => ({ ...f, veiculo: { ...f.veiculo, placa: e.target.value.toUpperCase() } }))} className={inputCls} style={{ fontFamily: "'Roboto Mono', monospace" }} placeholder="ABC1D23" /></Field>
-        <Field label="Chassi"><input value={form.veiculo.chassi} onChange={(e) => setForm((f) => ({ ...f, veiculo: { ...f.veiculo, chassi: e.target.value.toUpperCase() } }))} className={inputCls} style={{ fontFamily: "'Roboto Mono', monospace" }} placeholder="9BW..." /></Field>
+        <Field label="Chassi"><input value={form.veiculo.chassi} onChange={(e) => onChangeChassiOS(e.target.value)} className={inputCls} style={{ fontFamily: "'Roboto Mono', monospace" }} placeholder="9BW... (17 dígitos)" maxLength={17} /></Field>
+        {form.veiculo.chassi && form.veiculo.chassi.length === 17 && decodificarChassi(form.veiculo.chassi) && (
+          <p style={{ fontSize: '11px', color: COLORS.navy, gridColumn: '1 / -1', marginTop: '-6px' }}>Identificado pelo chassi: {decodificarChassi(form.veiculo.chassi).marca || '—'} {decodificarChassi(form.veiculo.chassi).ano || ''} (confira e ajuste se precisar)</p>
+        )}
         <Field label="Modelo / Marca"><input value={form.veiculo.modelo} onChange={(e) => setForm((f) => ({ ...f, veiculo: { ...f.veiculo, modelo: e.target.value } }))} className={inputCls} placeholder="Ex.: VW Gol 1.6" /></Field>
         <Field label="Ano"><input value={form.veiculo.ano} onChange={(e) => setForm((f) => ({ ...f, veiculo: { ...f.veiculo, ano: e.target.value } }))} className={inputCls} placeholder="2018" /></Field>
         <Field label="Km atual"><input value={form.veiculo.km} onChange={(e) => setForm((f) => ({ ...f, veiculo: { ...f.veiculo, km: e.target.value } }))} className={inputCls} placeholder="Ex.: 84.000" /></Field>

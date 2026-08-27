@@ -355,7 +355,7 @@ export default function App() {
 
         {tab === 'dashboard' && (
           <Dashboard
-            ordens={ordens} estoque={estoque} papel={perfil.papel}
+            ordens={ordens} estoque={estoque} clientes={clientes} papel={perfil.papel}
             onNovo={abrirNovaOS} onVer={abrirVerOS} onEditar={abrirEditarOS}
             onExcluir={(os) => setConfirmDelete({ tipo: 'os', item: os, label: `a OS ${os.numero}` })}
             onMudarStatus={mudarStatusOS}

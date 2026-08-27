@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Plus, Search, Printer, Pencil, Trash2, ClipboardList } from 'lucide-react';
-import { COLORS, STATUS, brl, brDate, calcTotal, thisMonthKey, monthKey } from '../lib/constants';
+import { COLORS, STATUS, brl, brDate, calcTotal, thisMonthKey, monthKey, statusManutencao, STATUS_MANUTENCAO } from '../lib/constants';
 
-export default function Dashboard({ ordens, estoque, papel, onNovo, onVer, onEditar, onExcluir, onMudarStatus }) {
+export default function Dashboard({ ordens, estoque, clientes, papel, onNovo, onVer, onEditar, onExcluir, onMudarStatus }) {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('todas');
 
@@ -28,6 +28,19 @@ export default function Dashboard({ ordens, estoque, papel, onNovo, onVer, onEdi
     faturamentoMes: ordens.filter((o) => o.status === 'concluida' && monthKey(o.dataConclusao || o.createdAt) === thisMonthKey()).reduce((t, o) => t + calcTotal(o), 0),
     estoqueBaixo: estoque.filter((e) => (parseFloat(e.estoqueAtual) || 0) <= (parseFloat(e.estoqueMin) || 0)).length,
   };
+
+  const manutencoesAlerta = [];
+  (clientes || []).forEach((c) => {
+    (c.veiculos || []).forEach((v) => {
+      (v.manutencoes || []).forEach((m) => {
+        const s = statusManutencao(m);
+        if (s.status === 'proximo' || s.status === 'vencido') {
+          manutencoesAlerta.push({ id: m.id, cliente: c.nome, placa: v.placa, item: m.item, ...s });
+        }
+      });
+    });
+  });
+  manutencoesAlerta.sort((a, b) => (a.diasRestantes || 0) - (b.diasRestantes || 0));
 
   return (
     <div className="p-5 md:p-8">
@@ -55,6 +68,29 @@ export default function Dashboard({ ordens, estoque, papel, onNovo, onVer, onEdi
           </div>
         ))}
       </div>
+
+      {manutencoesAlerta.length > 0 && (
+        <div className="mb-8">
+          <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: '15px', color: COLORS.ink, textTransform: 'uppercase', letterSpacing: '0.03em', marginBottom: '8px' }}>Revisões e trocas a vencer</div>
+          <div className="flex flex-col gap-2">
+            {manutencoesAlerta.map((m) => {
+              const st = STATUS_MANUTENCAO[m.status];
+              return (
+                <div key={m.id} className="flex items-center justify-between gap-3 p-3 flex-wrap" style={{ background: COLORS.card, border: `1px solid ${st.fg}` }}>
+                  <div>
+                    <span style={{ fontWeight: 600, color: COLORS.ink }}>{m.item || 'Item'}</span>
+                    <span style={{ color: COLORS.textMuted, fontSize: '13px' }}> — {m.cliente} · <span style={{ fontFamily: "'Roboto Mono', monospace" }}>{m.placa}</span></span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span style={{ fontSize: '12px', color: COLORS.textMuted }}>{m.dataProxima ? brDate(m.dataProxima.toISOString().slice(0, 10)) : '—'}</span>
+                    <span style={{ padding: '2px 8px', background: st.bg, color: st.fg, fontFamily: "'Oswald', sans-serif", fontSize: '12px', textTransform: 'uppercase' }}>{m.status === 'vencido' ? `Vencido há ${Math.abs(m.diasRestantes)}d` : `Vence em ${m.diasRestantes}d`}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-3 mb-4">
         <div className="flex items-center gap-2 px-3 py-2 flex-1 min-w-[220px]" style={{ background: COLORS.card, border: `1px solid ${COLORS.line}` }}>

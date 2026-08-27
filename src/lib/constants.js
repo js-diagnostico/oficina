@@ -81,7 +81,55 @@ export function emptyOS() {
   };
 }
 export function emptyCliente() { return { id: null, nome: '', telefone: '', documento: '', endereco: '', veiculos: [] }; }
-export function emptyVeiculo() { return { id: uid(), placa: '', modelo: '', ano: '', chassi: '' }; }
+export function emptyVeiculo() { return { id: uid(), placa: '', modelo: '', ano: '', chassi: '', manutencoes: [] }; }
+
+// ---------- Decodificação gratuita do chassi (VIN) ----------
+// Tabela parcial dos prefixos (WMI) mais comuns de fabricantes no Brasil. Não é uma consulta oficial,
+// é só a leitura do padrão internacional do próprio número do chassi — por isso não tem custo nem precisa de internet.
+export const WMI_TABELA = {
+  '9BW': 'Volkswagen', '9BD': 'Fiat', '9BG': 'Chevrolet', '9BF': 'Ford',
+  '9BR': 'Toyota', '93H': 'Honda', '9C2': 'Renault', '9BS': 'Scania',
+  '935': 'Mitsubishi', '93X': 'Hyundai', '9BH': 'Hyundai', '9BP': 'Peugeot',
+  '93Y': 'Citroën', '9BA': 'Audi', '9BM': 'Mercedes-Benz', '9BN': 'Nissan',
+  '9BJ': 'Jeep',
+};
+// Código do 10º caractere do chassi = ano-modelo (padrão internacional, ciclo de 30 anos).
+// Mapeado aqui para o ciclo 2010–2039, que cobre os veículos mais comuns numa oficina hoje.
+export const ANO_CHASSI_TABELA = {
+  A: 2010, B: 2011, C: 2012, D: 2013, E: 2014, F: 2015, G: 2016, H: 2017, J: 2018, K: 2019,
+  L: 2020, M: 2021, N: 2022, P: 2023, R: 2024, S: 2025, T: 2026, V: 2027, W: 2028, X: 2029,
+  Y: 2030, '1': 2031, '2': 2032, '3': 2033, '4': 2034, '5': 2035, '6': 2036, '7': 2037, '8': 2038, '9': 2039,
+};
+export function decodificarChassi(chassi) {
+  if (!chassi || chassi.length !== 17) return null;
+  const c = chassi.toUpperCase();
+  const marca = WMI_TABELA[c.slice(0, 3)] || null;
+  const ano = ANO_CHASSI_TABELA[c[9]] || null;
+  if (!marca && !ano) return null;
+  return { marca, ano };
+}
+
+// ---------- Manutenções preventivas (lembretes por km/tempo) ----------
+export const MANUTENCOES_SUGERIDAS = ['Troca de óleo', 'Correia dentada', 'Correia auxiliar', 'Pastilhas de freio', 'Filtro de ar', 'Filtro de combustível', 'Filtro de cabine', 'Velas de ignição', 'Bateria', 'Fluido de freio'];
+export function emptyManutencao() { return { id: uid(), item: '', kmUltima: '', dataUltima: new Date().toISOString().slice(0, 10), intervaloKm: '', intervaloMeses: '' }; }
+export function statusManutencao(m) {
+  if (!m.dataUltima || !m.intervaloMeses) return { status: 'sem-dados', dataProxima: null, diasRestantes: null };
+  const dataUltima = new Date(m.dataUltima + 'T00:00:00');
+  const dataProxima = new Date(dataUltima);
+  dataProxima.setMonth(dataProxima.getMonth() + (parseInt(m.intervaloMeses, 10) || 0));
+  const hoje = new Date();
+  const diasRestantes = Math.round((dataProxima - hoje) / (1000 * 60 * 60 * 24));
+  let status = 'ok';
+  if (diasRestantes < 0) status = 'vencido';
+  else if (diasRestantes <= 30) status = 'proximo';
+  return { status, dataProxima, diasRestantes };
+}
+export const STATUS_MANUTENCAO = {
+  ok: { label: 'Em dia', fg: COLORS.green, bg: COLORS.greenSoft },
+  proximo: { label: 'Vencendo', fg: COLORS.gold, bg: COLORS.goldSoft },
+  vencido: { label: 'Vencido', fg: COLORS.red, bg: COLORS.redSoft },
+  'sem-dados': { label: 'Sem data', fg: COLORS.textMuted, bg: '#EEECE6' },
+};
 export function emptyPeca() { return { id: null, codigo: '', descricao: '', categoria: '', custo: '', preco: '', estoqueAtual: '', estoqueMin: '' }; }
 export function emptyFuncionario() { return { id: null, nome: '', papel: 'mecanico', percentual: '', telefone: '' }; }
 export function emptyServicoCatalogo() { return { id: null, nome: '', categoria: CATEGORIAS_SERVICO[0], valorPadrao: '', descricao: '' }; }
