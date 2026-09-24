@@ -1,5 +1,6 @@
 // Função de servidor (roda na Vercel, nunca no navegador do cliente).
-// Mantém a chave da IA em segredo — o site nunca vê ANTHROPIC_API_KEY.
+// Usa a API do Google Gemini (tem nível gratuito, sem cartão de crédito).
+// Mantém a chave em segredo — o site nunca vê GEMINI_API_KEY.
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -7,9 +8,9 @@ export default async function handler(req, res) {
     return;
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    res.status(500).json({ error: 'ANTHROPIC_API_KEY não configurada nas variáveis de ambiente da Vercel.' });
+    res.status(500).json({ error: 'GEMINI_API_KEY não configurada nas variáveis de ambiente da Vercel.' });
     return;
   }
 
@@ -30,19 +31,17 @@ Responda SOMENTE em JSON válido, sem nenhum texto antes ou depois, exatamente n
 {"valorSugerido": 000, "faixaMin": 000, "faixaMax": 000, "justificativa": "explicação breve em até 2 frases, em português"}`;
 
   try {
-    const resposta = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 300,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    });
+    const resposta = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 300 },
+        }),
+      }
+    );
 
     if (!resposta.ok) {
       const textoErro = await resposta.text();
@@ -51,7 +50,8 @@ Responda SOMENTE em JSON válido, sem nenhum texto antes ou depois, exatamente n
     }
 
     const dados = await resposta.json();
-    const texto = (dados.content || []).map((bloco) => bloco.text || '').join('').trim();
+    const texto = dados?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('').trim() || '';
+    if (!texto) { res.status(502).json({ error: 'A IA não retornou nenhum texto.' }); return; }
     const limpo = texto.replace(/```json/gi, '').replace(/```/g, '').trim();
     const sugestao = JSON.parse(limpo);
 
