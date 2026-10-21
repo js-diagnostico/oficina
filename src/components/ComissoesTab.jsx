@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CheckCircle2, Circle } from 'lucide-react';
-import { COLORS, PAPEL_FUNCIONARIO, brl, thisMonthKey, monthKey, totaisOS } from '../lib/constants';
+import { COLORS, PAPEL_FUNCIONARIO, brl, thisMonthKey, monthKey, basesComissaoOS } from '../lib/constants';
 
 export default function ComissoesTab({ ordens, funcionarios, comissoesPagas, onTogglePago }) {
   const [mes, setMes] = useState(thisMonthKey());
@@ -9,8 +9,8 @@ export default function ComissoesTab({ ordens, funcionarios, comissoesPagas, onT
     const ehMecanico = f.papel === 'mecanico' || f.papel === 'ambos';
     const ehVendedor = f.papel === 'vendedor' || f.papel === 'ambos';
     const osDoMes = ordens.filter((o) => o.status === 'concluida' && monthKey(o.dataConclusao || o.createdAt) === mes);
-    const baseServicos = ehMecanico ? osDoMes.filter((o) => o.mecanicoId === f.id).reduce((t, o) => t + totaisOS(o).servicoLiquido, 0) : 0;
-    const basePecas = ehVendedor ? osDoMes.filter((o) => o.vendedorId === f.id).reduce((t, o) => t + totaisOS(o).produtoLiquido, 0) : 0;
+    const baseServicos = ehMecanico ? osDoMes.reduce((t, o) => t + (basesComissaoOS(o).mecanicos[f.id] || 0), 0) : 0;
+    const basePecas = ehVendedor ? osDoMes.reduce((t, o) => t + (basesComissaoOS(o).vendedores[f.id] || 0), 0) : 0;
     const pct = parseFloat(f.percentual) || 0;
     const comissaoServicos = baseServicos * pct / 100;
     const comissaoPecas = basePecas * pct / 100;

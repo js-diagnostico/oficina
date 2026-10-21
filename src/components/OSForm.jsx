@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronLeft, User, Car, Gauge, Wrench, Package, ClipboardList, Percent, AlertCircle, Trash2, Sparkles } from 'lucide-react';
+import { ChevronLeft, User, Car, Gauge, Wrench, Package, ClipboardList, Percent, AlertCircle, Trash2 } from 'lucide-react';
 import { COLORS, STATUS, STATUS_CHECKLIST, FORMAS_PAGAMENTO, brl, totaisOS, inputCls, uid, decodificarChassi } from '../lib/constants';
 import { Section, Field, AddBtn } from './UI';
 import CarroDiagrama from './CarroDiagrama';
@@ -9,9 +9,6 @@ export default function OSForm({ osInicial, clientes, estoque, funcionarios, cat
   const [erro, setErro] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [clienteSelId, setClienteSelId] = useState('');
-  const [sugestaoIA, setSugestaoIA] = useState(null);
-  const [carregandoIA, setCarregandoIA] = useState(false);
-  const [erroIA, setErroIA] = useState('');
 
   const clienteSel = clientes.find((c) => c.id === clienteSelId);
   const mecanicos = funcionarios.filter((f) => f.papel === 'mecanico' || f.papel === 'ambos');
@@ -41,7 +38,7 @@ export default function OSForm({ osInicial, clientes, estoque, funcionarios, cat
     }));
   };
 
-  const addServico = () => setForm((f) => ({ ...f, servicos: [...f.servicos, { id: uid(), descricao: '', valor: '', servicoId: '' }] }));
+  const addServico = () => setForm((f) => ({ ...f, servicos: [...f.servicos, { id: uid(), descricao: '', valor: '', servicoId: '', mecanicoId: f.mecanicoId || '' }] }));
   const updServico = (id, field, val) => setForm((f) => ({ ...f, servicos: f.servicos.map((s) => (s.id === id ? { ...s, [field]: val } : s)) }));
   const rmServico = (id) => setForm((f) => ({ ...f, servicos: f.servicos.filter((s) => s.id !== id) }));
   const linkServicoCatalogo = (id, servicoId) => setForm((f) => ({
@@ -54,7 +51,7 @@ export default function OSForm({ osInicial, clientes, estoque, funcionarios, cat
     }),
   }));
 
-  const addPeca = () => setForm((f) => ({ ...f, pecas: [...f.pecas, { id: uid(), descricao: '', qtd: 1, valorUnit: '', estoqueId: '' }] }));
+  const addPeca = () => setForm((f) => ({ ...f, pecas: [...f.pecas, { id: uid(), descricao: '', qtd: 1, valorUnit: '', estoqueId: '', vendedorId: f.vendedorId || '' }] }));
   const updPeca = (id, field, val) => setForm((f) => ({ ...f, pecas: f.pecas.map((p) => (p.id === id ? { ...p, [field]: val } : p)) }));
   const rmPeca = (id) => setForm((f) => ({ ...f, pecas: f.pecas.filter((p) => p.id !== id) }));
   const linkPecaEstoque = (id, estoqueId) => setForm((f) => ({
@@ -80,33 +77,6 @@ export default function OSForm({ osInicial, clientes, estoque, funcionarios, cat
   };
   const atualizarNotaAvaria = (id, nota) => setForm((f) => ({ ...f, avarias: f.avarias.map((a) => (a.id === id ? { ...a, nota } : a)) }));
   const removerAvaria = (id) => setForm((f) => ({ ...f, avarias: f.avarias.filter((a) => a.id !== id) }));
-
-  const pedirSugestaoIA = async () => {
-    if (!form.problema.trim()) { setErroIA('Descreva o problema relatado antes de pedir a sugestão.'); return; }
-    setErroIA('');
-    setSugestaoIA(null);
-    setCarregandoIA(true);
-    try {
-      const resp = await fetch('/api/sugerir-preco', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ descricao: form.problema, veiculo: form.veiculo.modelo }),
-      });
-      const dados = await resp.json();
-      if (!resp.ok) throw new Error(dados.error || 'Não foi possível gerar a sugestão.');
-      setSugestaoIA(dados);
-    } catch (e) {
-      setErroIA(e.message || 'Não foi possível gerar a sugestão.');
-    } finally {
-      setCarregandoIA(false);
-    }
-  };
-
-  const usarSugestaoIA = () => {
-    if (!sugestaoIA) return;
-    setForm((f) => ({ ...f, servicos: [...f.servicos, { id: uid(), descricao: 'Serviço (sugestão IA)', valor: String(sugestaoIA.valorSugerido), servicoId: '' }] }));
-    setSugestaoIA(null);
-  };
 
   const submit = async () => {
     if (!form.cliente.nome.trim()) { setErro('Informe o nome do cliente.'); return; }
@@ -205,32 +175,13 @@ export default function OSForm({ osInicial, clientes, estoque, funcionarios, cat
 
       <Section title="Diagnóstico" icon={Gauge}>
         <Field label="Problema relatado" full><textarea value={form.problema} onChange={(e) => setForm((f) => ({ ...f, problema: e.target.value }))} className={inputCls} rows={3} placeholder="Descreva o problema relatado pelo cliente" /></Field>
-        <div style={{ gridColumn: '1 / -1' }}>
-          <button type="button" onClick={pedirSugestaoIA} disabled={carregandoIA} className="flex items-center gap-2 text-xs px-3 py-1.5 mb-2" style={{ color: COLORS.navy, border: `1px solid ${COLORS.navy}`, fontFamily: "'Oswald', sans-serif", textTransform: 'uppercase', opacity: carregandoIA ? 0.6 : 1, background: 'transparent' }}>
-            <Sparkles size={14} /> {carregandoIA ? 'Consultando IA…' : 'Sugerir preço com IA'}
-          </button>
-          {erroIA && <p style={{ fontSize: '12px', color: COLORS.red, marginBottom: '8px' }}>{erroIA}</p>}
-          {sugestaoIA && (
-            <div className="p-3 mb-3" style={{ background: COLORS.navySoft, border: `1px solid ${COLORS.navy}` }}>
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div>
-                  <span style={{ fontFamily: "'Roboto Mono', monospace", fontWeight: 700, fontSize: '18px', color: COLORS.navy }}>{brl(sugestaoIA.valorSugerido)}</span>
-                  <span style={{ fontSize: '12px', color: COLORS.textMuted, marginLeft: '8px' }}>(faixa: {brl(sugestaoIA.faixaMin)} – {brl(sugestaoIA.faixaMax)})</span>
-                </div>
-                <button type="button" onClick={usarSugestaoIA} className="px-3 py-1.5 text-xs" style={{ background: COLORS.navy, color: '#fff', fontFamily: "'Oswald', sans-serif", textTransform: 'uppercase' }}>Adicionar como serviço</button>
-              </div>
-              {sugestaoIA.justificativa && <p style={{ fontSize: '12px', color: COLORS.ink, marginTop: '6px' }}>{sugestaoIA.justificativa}</p>}
-              <p style={{ fontSize: '11px', color: COLORS.textMuted, marginTop: '6px' }}>Sugestão gerada por IA, apenas uma estimativa — confira antes de usar.</p>
-            </div>
-          )}
-        </div>
-        <Field label="Mecânico responsável">
+        <Field label="Mecânico padrão (novos serviços)">
           <select value={form.mecanicoId} onChange={(e) => setForm((f) => ({ ...f, mecanicoId: e.target.value }))} className={inputCls}>
             <option value="">Selecionar…</option>
             {mecanicos.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
           </select>
         </Field>
-        <Field label="Vendedor (peças)">
+        <Field label="Vendedor padrão (novas peças)">
           <select value={form.vendedorId} onChange={(e) => setForm((f) => ({ ...f, vendedorId: e.target.value }))} className={inputCls}>
             <option value="">Selecionar…</option>
             {vendedores.map((v) => <option key={v.id} value={v.id}>{v.nome}</option>)}
@@ -266,6 +217,10 @@ export default function OSForm({ osInicial, clientes, estoque, funcionarios, cat
               <input value={s.valor} onChange={(e) => updServico(s.id, 'valor', e.target.value)} className={inputCls} placeholder="R$" style={{ width: '110px', fontFamily: "'Roboto Mono', monospace", border: `1px solid ${COLORS.line}` }} inputMode="decimal" />
               <button onClick={() => rmServico(s.id)} style={{ color: COLORS.red }}><Trash2 size={16} /></button>
             </div>
+            <select value={s.mecanicoId || ''} onChange={(e) => updServico(s.id, 'mecanicoId', e.target.value)} className={inputCls} style={{ border: `1px solid ${COLORS.line}` }}>
+              <option value="">Mecânico deste serviço…</option>
+              {mecanicos.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
+            </select>
           </div>
         ))}
       </Section>
@@ -286,6 +241,10 @@ export default function OSForm({ osInicial, clientes, estoque, funcionarios, cat
               <input value={p.valorUnit} onChange={(e) => updPeca(p.id, 'valorUnit', e.target.value)} className={inputCls} placeholder="Vlr. unit." style={{ width: '110px', fontFamily: "'Roboto Mono', monospace", border: `1px solid ${COLORS.line}` }} inputMode="decimal" />
               <button onClick={() => rmPeca(p.id)} style={{ color: COLORS.red }}><Trash2 size={16} /></button>
             </div>
+            <select value={p.vendedorId || ''} onChange={(e) => updPeca(p.id, 'vendedorId', e.target.value)} className={inputCls} style={{ border: `1px solid ${COLORS.line}` }}>
+              <option value="">Vendedor desta peça…</option>
+              {vendedores.map((v) => <option key={v.id} value={v.id}>{v.nome}</option>)}
+            </select>
           </div>
         ))}
       </Section>

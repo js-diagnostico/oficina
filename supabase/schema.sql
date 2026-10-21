@@ -154,8 +154,14 @@ create policy "estoque_all_logado" on estoque for all using (auth.uid() is not n
 create policy "catalogo_all_logado" on catalogo_servicos for all using (auth.uid() is not null) with check (auth.uid() is not null);
 create policy "ordens_all_logado" on ordens_servico for all using (auth.uid() is not null) with check (auth.uid() is not null);
 
--- funcionarios, comissoes_pagas, config: só admin lê e altera (dados sensíveis de comissão)
-create policy "funcionarios_all_admin" on funcionarios for all using (is_admin()) with check (is_admin());
+-- funcionarios: qualquer logado pode LER (precisa pra escolher mecânico/vendedor na OS),
+-- mas só admin pode criar/editar/excluir (os dados de comissão ficam protegidos)
+create policy "funcionarios_select_logado" on funcionarios for select using (auth.uid() is not null);
+create policy "funcionarios_insert_admin" on funcionarios for insert with check (is_admin());
+create policy "funcionarios_update_admin" on funcionarios for update using (is_admin()) with check (is_admin());
+create policy "funcionarios_delete_admin" on funcionarios for delete using (is_admin());
+
+-- comissoes_pagas, config: só admin lê e altera (dados sensíveis de comissão)
 create policy "comissoes_all_admin" on comissoes_pagas for all using (is_admin()) with check (is_admin());
 create policy "config_select_logado" on config for select using (auth.uid() is not null);
 create policy "config_update_admin" on config for update using (is_admin());

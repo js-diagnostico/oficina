@@ -152,6 +152,25 @@ export function totaisOS(os) {
 }
 export const calcTotal = (os) => totaisOS(os).totalLiquido;
 
+// Base de comissão por funcionário: cada serviço conta para o mecânico da linha e cada peça para o vendedor da linha.
+// O desconto é rateado proporcionalmente. OS antigas (sem funcionário na linha) usam o mecânico/vendedor padrão da OS.
+export function basesComissaoOS(os) {
+  const t = totaisOS(os);
+  const fs = t.totalServico > 0 ? t.servicoLiquido / t.totalServico : 0;
+  const fp = t.totalProduto > 0 ? t.produtoLiquido / t.totalProduto : 0;
+  const mecanicos = {};
+  const vendedores = {};
+  (os.servicos || []).forEach((s) => {
+    const id = s.mecanicoId || os.mecanicoId;
+    if (id) mecanicos[id] = (mecanicos[id] || 0) + (parseFloat(s.valor) || 0) * fs;
+  });
+  (os.pecas || []).forEach((p) => {
+    const id = p.vendedorId || os.vendedorId;
+    if (id) vendedores[id] = (vendedores[id] || 0) + (parseFloat(p.qtd) || 0) * (parseFloat(p.valorUnit) || 0) * fp;
+  });
+  return { mecanicos, vendedores };
+}
+
 export const brl = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 export const brDate = (str) => {
   if (!str) return '—';

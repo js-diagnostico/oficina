@@ -94,7 +94,7 @@ export default function App() {
         tarefas.push(api.fetchComissoesPagas().then(setComissoesPagas));
         tarefas.push(api.fetchProfiles().then(setUsuarios));
       } else {
-        tarefas.push(api.fetchFuncionarios().then(setFuncionarios)); // precisa pra montar o select de mecânico/vendedor na OS
+        tarefas.push(api.fetchFuncionarios().then(setFuncionarios).catch(() => setFuncionarios([]))); // precisa pra montar o select de mecânico/vendedor na OS (se falhar, o app abre mesmo assim)
       }
       await Promise.all(tarefas);
       setDadosCarregados(true);
@@ -309,7 +309,7 @@ export default function App() {
 
   const NavBtn = ({ target, icon: Icon, label }) => (
     <button
-      onClick={() => setTab(target)}
+      onClick={() => (target === 'form' ? abrirNovaOS() : setTab(target))}
       className="flex items-center gap-2 px-4 py-3 shrink-0 md:w-full text-left transition-colors"
       style={{
         color: tab === target ? COLORS.red : '#C9C6BE',
@@ -362,7 +362,7 @@ export default function App() {
           />
         )}
 
-        {tab === 'form' && (
+        {tab === 'form' && osEditando && (
           <OSForm
             osInicial={osEditando} clientes={clientes} estoque={estoque} funcionarios={funcionarios}
             catalogoServicos={catalogoServicos} config={config}
