@@ -149,10 +149,7 @@ create policy "profiles_update_admin" on profiles for update using (is_admin());
 create policy "profiles_delete_admin" on profiles for delete using (is_admin());
 
 -- clientes, estoque, catálogo, ordens: qualquer usuário logado (admin ou funcionário) pode ler e escrever
-create policy "clientes_all_logado" on clientes for all using (auth.uid() is not null) with check (auth.uid() is not null);
-create policy "estoque_all_logado" on estoque for all using (auth.uid() is not null) with check (auth.uid() is not null);
 create policy "catalogo_all_logado" on catalogo_servicos for all using (auth.uid() is not null) with check (auth.uid() is not null);
-create policy "ordens_all_logado" on ordens_servico for all using (auth.uid() is not null) with check (auth.uid() is not null);
 
 -- funcionarios: qualquer logado pode LER (precisa pra escolher mecânico/vendedor na OS),
 -- mas só admin pode criar/editar/excluir (os dados de comissão ficam protegidos)
@@ -171,3 +168,85 @@ create policy "config_update_admin" on config for update using (is_admin());
 -- Authentication > Providers > Email > desative "Confirm email"
 -- (assim o login funciona na hora, sem precisar de servidor de e-mail)
 -- ============================================================
+-- Permite ao ADMINISTRADOR excluir de verdade o login de um usuário e liberar e-mails "presos".
+-- Pode rodar mais de uma vez sem problema.
+
+-- 1) Exclui o acesso por completo (perfil + conta de login). Só admin; não deixa excluir a si mesmo.
+create or replace function public.excluir_usuario(alvo uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'Somente o administrador pode excluir usuários.';
+  end if;
+  if alvo = auth.uid() then
+    raise exception 'Você não pode excluir o seu próprio acesso.';
+  end if;
+  delete from public.profiles where id = alvo;
+  delete from auth.users where id = alvo;
+end;
+$$;
+
+-- 2) Libera um e-mail que ficou preso numa conta de login SEM acesso no app (sobra de exclusões antigas).
+--    Nunca apaga quem ainda tem acesso ativo. Retorna: 'liberado', 'ativo' ou 'inexistente'.
+create or replace function public.liberar_email(p_email text)
+returns text
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare v_id uuid;
+begin
+  if not public.is_admin() then
+    raise exception 'Somente o administrador pode fazer isso.';
+  end if;
+  select id into v_id from auth.users where lower(email) = lower(trim(p_email));
+  if v_id is null then return 'inexistente'; end if;
+  if exists (select 1 from public.profiles where id = v_id) then return 'ativo'; end if;
+  delete from auth.users where id = v_id;
+  return 'liberado';
+end;
+$$;
+
+revoke all on function public.excluir_usuario(uuid) from public, anon;
+revoke all on function public.liberar_email(text) from public, anon;
+grant execute on function public.excluir_usuario(uuid) to authenticated;
+grant execute on function public.liberar_email(text) to authenticated;
+
+-- Exclusão só para admin (OS, clientes, estoque)
+-- Só o ADMINISTRADOR pode excluir OS, clientes e itens do estoque.
+-- Funcionários continuam podendo ler, criar e editar (inclusive dar baixa no estoque).
+-- Pode rodar mais de uma vez sem problema.
+
+drop policy if exists "clientes_all_logado" on clientes;
+drop policy if exists "clientes_select_logado" on clientes;
+drop policy if exists "clientes_insert_logado" on clientes;
+drop policy if exists "clientes_update_logado" on clientes;
+drop policy if exists "clientes_delete_admin" on clientes;
+create policy "clientes_select_logado" on clientes for select using (auth.uid() is not null);
+create policy "clientes_insert_logado" on clientes for insert with check (auth.uid() is not null);
+create policy "clientes_update_logado" on clientes for update using (auth.uid() is not null) with check (auth.uid() is not null);
+create policy "clientes_delete_admin" on clientes for delete using (is_admin());
+
+drop policy if exists "estoque_all_logado" on estoque;
+drop policy if exists "estoque_select_logado" on estoque;
+drop policy if exists "estoque_insert_logado" on estoque;
+drop policy if exists "estoque_update_logado" on estoque;
+drop policy if exists "estoque_delete_admin" on estoque;
+create policy "estoque_select_logado" on estoque for select using (auth.uid() is not null);
+create policy "estoque_insert_logado" on estoque for insert with check (auth.uid() is not null);
+create policy "estoque_update_logado" on estoque for update using (auth.uid() is not null) with check (auth.uid() is not null);
+create policy "estoque_delete_admin" on estoque for delete using (is_admin());
+
+drop policy if exists "ordens_all_logado" on ordens_servico;
+drop policy if exists "ordens_select_logado" on ordens_servico;
+drop policy if exists "ordens_insert_logado" on ordens_servico;
+drop policy if exists "ordens_update_logado" on ordens_servico;
+drop policy if exists "ordens_delete_admin" on ordens_servico;
+create policy "ordens_select_logado" on ordens_servico for select using (auth.uid() is not null);
+create policy "ordens_insert_logado" on ordens_servico for insert with check (auth.uid() is not null);
+create policy "ordens_update_logado" on ordens_servico for update using (auth.uid() is not null) with check (auth.uid() is not null);
+create policy "ordens_delete_admin" on ordens_servico for delete using (is_admin());

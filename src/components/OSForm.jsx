@@ -38,7 +38,7 @@ export default function OSForm({ osInicial, clientes, estoque, funcionarios, cat
     }));
   };
 
-  const addServico = () => setForm((f) => ({ ...f, servicos: [...f.servicos, { id: uid(), descricao: '', valor: '', servicoId: '', mecanicoId: f.mecanicoId || '' }] }));
+  const addServico = () => setForm((f) => ({ ...f, servicos: [...f.servicos, { id: uid(), descricao: '', valor: '', servicoId: '', mecanicoId: '' }] }));
   const updServico = (id, field, val) => setForm((f) => ({ ...f, servicos: f.servicos.map((s) => (s.id === id ? { ...s, [field]: val } : s)) }));
   const rmServico = (id) => setForm((f) => ({ ...f, servicos: f.servicos.filter((s) => s.id !== id) }));
   const linkServicoCatalogo = (id, servicoId) => setForm((f) => ({
@@ -51,7 +51,7 @@ export default function OSForm({ osInicial, clientes, estoque, funcionarios, cat
     }),
   }));
 
-  const addPeca = () => setForm((f) => ({ ...f, pecas: [...f.pecas, { id: uid(), descricao: '', qtd: 1, valorUnit: '', estoqueId: '', vendedorId: f.vendedorId || '' }] }));
+  const addPeca = () => setForm((f) => ({ ...f, pecas: [...f.pecas, { id: uid(), descricao: '', qtd: 1, valorUnit: '', estoqueId: '', vendedorId: '' }] }));
   const updPeca = (id, field, val) => setForm((f) => ({ ...f, pecas: f.pecas.map((p) => (p.id === id ? { ...p, [field]: val } : p)) }));
   const rmPeca = (id) => setForm((f) => ({ ...f, pecas: f.pecas.filter((p) => p.id !== id) }));
   const linkPecaEstoque = (id, estoqueId) => setForm((f) => ({
@@ -175,18 +175,6 @@ export default function OSForm({ osInicial, clientes, estoque, funcionarios, cat
 
       <Section title="Diagnóstico" icon={Gauge}>
         <Field label="Problema relatado" full><textarea value={form.problema} onChange={(e) => setForm((f) => ({ ...f, problema: e.target.value }))} className={inputCls} rows={3} placeholder="Descreva o problema relatado pelo cliente" /></Field>
-        <Field label="Mecânico padrão (novos serviços)">
-          <select value={form.mecanicoId} onChange={(e) => setForm((f) => ({ ...f, mecanicoId: e.target.value }))} className={inputCls}>
-            <option value="">Selecionar…</option>
-            {mecanicos.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
-          </select>
-        </Field>
-        <Field label="Vendedor padrão (novas peças)">
-          <select value={form.vendedorId} onChange={(e) => setForm((f) => ({ ...f, vendedorId: e.target.value }))} className={inputCls}>
-            <option value="">Selecionar…</option>
-            {vendedores.map((v) => <option key={v.id} value={v.id}>{v.nome}</option>)}
-          </select>
-        </Field>
         <Field label="Status">
           <select value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))} className={inputCls}>
             {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}

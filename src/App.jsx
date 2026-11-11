@@ -256,10 +256,21 @@ export default function App() {
   // ---------- Usuários (login do app) ----------
   const criarUsuario = async ({ nome, email, senha }) => {
     const { data: { session: sessaoAtual } } = await supabase.auth.getSession();
-    const { data, error } = await supabase.auth.signUp({ email: email.trim(), password: senha });
-    if (error) throw error;
+    const tentarCadastro = () => supabase.auth.signUp({ email: email.trim(), password: senha });
+    const jaExiste = (r) => (r.error && /already (been )?registered|already exists/i.test(r.error.message || ''))
+      || (r.data && r.data.user && Array.isArray(r.data.user.identities) && r.data.user.identities.length === 0);
+
+    let r = await tentarCadastro();
+    if (jaExiste(r)) {
+      // e-mail preso numa conta antiga (acesso removido antes): o admin pode liberar, se não houver acesso ativo
+      const { data: resultado, error: errLiberar } = await supabase.rpc('liberar_email', { p_email: email.trim() });
+      if (errLiberar) throw new Error('Esse e-mail já foi usado antes. Rode o SQL "migration-excluir-usuario.sql" no Supabase para liberar e-mails antigos.');
+      if (resultado === 'ativo') throw new Error('Esse e-mail já pertence a um usuário com acesso ativo. Use outro e-mail ou exclua o acesso antigo na lista abaixo.');
+      r = await tentarCadastro();
+    }
+    if (r.error) throw r.error;
     if (sessaoAtual) await supabase.auth.setSession({ access_token: sessaoAtual.access_token, refresh_token: sessaoAtual.refresh_token });
-    await api.inserirPerfilComRetry(data.user.id, nome, 'funcionario');
+    await api.inserirPerfilComRetry(r.data.user.id, nome, 'funcionario');
     setUsuarios(await api.fetchProfiles());
     flash('Usuário criado.');
   };
@@ -269,9 +280,15 @@ export default function App() {
   };
   const excluirUsuario = async () => {
     const u = confirmDelete.item;
-    await api.excluirProfileApi(u.id);
+    const { error } = await supabase.rpc('excluir_usuario', { alvo: u.id });
+    if (error) {
+      // SQL ainda não aplicado: remove só o acesso dentro do app (comportamento antigo)
+      await api.excluirProfileApi(u.id);
+      flash('Acesso removido, mas o e-mail continua reservado. Rode o SQL "migration-excluir-usuario.sql" no Supabase para poder excluir por completo.');
+    } else {
+      flash('Usuário excluído por completo. O e-mail pode ser cadastrado de novo.');
+    }
     setUsuarios((prev) => prev.filter((x) => x.id !== u.id));
-    flash('Acesso removido. (A conta de login continua existindo no Supabase, apenas sem permissão dentro do app.)');
     setConfirmDelete(null);
   };
 
@@ -394,13 +411,13 @@ export default function App() {
         )}
 
         {tab === 'clientes' && (
-          <ClientesTab clientes={clientes} onSalvar={salvarCliente} onExcluir={(c) => setConfirmDelete({ tipo: 'cliente', item: c, label: `o cliente ${c.nome}` })} />
+          <ClientesTab podeExcluir={perfil.papel === 'admin'} clientes={clientes} onSalvar={salvarCliente} onExcluir={(c) => setConfirmDelete({ tipo: 'cliente', item: c, label: `o cliente ${c.nome}` })} />
         )}
         {tab === 'servicos' && (
           <ServicosCatalogoTab itens={catalogoServicos} onSalvar={salvarServicoCatalogo} onExcluir={(s) => setConfirmDelete({ tipo: 'servico', item: s, label: `o serviço ${s.nome}` })} />
         )}
         {tab === 'estoque' && (
-          <EstoqueTab itens={estoque} onSalvar={salvarPeca} onExcluir={(p) => setConfirmDelete({ tipo: 'peca', item: p, label: `o item ${p.descricao}` })} />
+          <EstoqueTab podeExcluir={perfil.papel === 'admin'} itens={estoque} onSalvar={salvarPeca} onExcluir={(p) => setConfirmDelete({ tipo: 'peca', item: p, label: `o item ${p.descricao}` })} />
         )}
         {tab === 'equipe' && perfil.papel === 'admin' && (
           <EquipeTab funcionarios={funcionarios} onSalvar={salvarFuncionario} onExcluir={(f) => setConfirmDelete({ tipo: 'funcionario', item: f, label: `${f.nome} da equipe` })} />

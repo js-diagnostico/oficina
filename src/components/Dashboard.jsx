@@ -139,7 +139,7 @@ export default function Dashboard({ ordens, estoque, clientes, papel, onNovo, on
                   </select>
                   <button onClick={() => onVer(os)} title="Ver / imprimir" className="p-1.5" style={{ color: COLORS.textMuted }}><Printer size={16} /></button>
                   <button onClick={() => onEditar(os)} title="Editar" className="p-1.5" style={{ color: COLORS.textMuted }}><Pencil size={16} /></button>
-                  <button onClick={() => onExcluir(os)} title="Excluir" className="p-1.5" style={{ color: COLORS.red }}><Trash2 size={16} /></button>
+                  {papel === 'admin' && <button onClick={() => onExcluir(os)} title="Excluir" className="p-1.5" style={{ color: COLORS.red }}><Trash2 size={16} /></button>}
                 </div>
               </div>
             );

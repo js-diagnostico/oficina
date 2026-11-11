@@ -3,7 +3,7 @@ import { Plus, Search, Pencil, Trash2 } from 'lucide-react';
 import { COLORS, inputCls, brl, emptyPeca } from '../lib/constants';
 import { Field } from './UI';
 
-export default function EstoqueTab({ itens, onSalvar, onExcluir }) {
+export default function EstoqueTab({ itens, onSalvar, onExcluir, podeExcluir }) {
   const [busca, setBusca] = useState('');
   const [editing, setEditing] = useState(null);
   const [salvando, setSalvando] = useState(false);
@@ -70,7 +70,7 @@ export default function EstoqueTab({ itens, onSalvar, onExcluir }) {
                   <span style={{ fontFamily: "'Roboto Mono', monospace", fontWeight: 700, color: baixo ? COLORS.red : COLORS.ink, fontSize: '14px' }}>{p.estoqueAtual || 0} un.</span>
                   {baixo && <span style={{ fontSize: '11px', color: COLORS.red, textTransform: 'uppercase', fontFamily: "'Oswald', sans-serif" }}>Estoque baixo</span>}
                   <button onClick={() => setEditing(JSON.parse(JSON.stringify(p)))} className="p-1.5" style={{ color: COLORS.textMuted }}><Pencil size={16} /></button>
-                  <button onClick={() => onExcluir(p)} className="p-1.5" style={{ color: COLORS.red }}><Trash2 size={16} /></button>
+                  {podeExcluir && <button onClick={() => onExcluir(p)} className="p-1.5" style={{ color: COLORS.red }}><Trash2 size={16} /></button>}
                 </div>
               </div>
             );

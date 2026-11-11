@@ -3,7 +3,7 @@ import { Plus, Search, Pencil, Trash2 } from 'lucide-react';
 import { COLORS, inputCls, emptyCliente, emptyVeiculo, emptyManutencao, decodificarChassi, statusManutencao, STATUS_MANUTENCAO, MANUTENCOES_SUGERIDAS } from '../lib/constants';
 import { Field, AddBtn } from './UI';
 
-export default function ClientesTab({ clientes, onSalvar, onExcluir }) {
+export default function ClientesTab({ clientes, onSalvar, onExcluir, podeExcluir }) {
   const [busca, setBusca] = useState('');
   const [editing, setEditing] = useState(null);
   const [salvando, setSalvando] = useState(false);
@@ -121,7 +121,7 @@ export default function ClientesTab({ clientes, onSalvar, onExcluir }) {
               </div>
               <div className="flex gap-2">
                 <button onClick={() => setEditing(JSON.parse(JSON.stringify(c)))} className="p-1.5" style={{ color: COLORS.textMuted }}><Pencil size={16} /></button>
-                <button onClick={() => onExcluir(c)} className="p-1.5" style={{ color: COLORS.red }}><Trash2 size={16} /></button>
+                {podeExcluir && <button onClick={() => onExcluir(c)} className="p-1.5" style={{ color: COLORS.red }}><Trash2 size={16} /></button>}
               </div>
             </div>
           ))}
